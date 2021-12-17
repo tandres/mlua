@@ -416,7 +416,11 @@ impl Lua {
             }
             let new_used_memory = mem_info.used_memory + mem_diff;
             if mem_info.memory_limit > 0 && new_used_memory > mem_info.memory_limit {
-                return ptr::null_mut();
+                if cfg!(feature = "alloc_panic") {
+                    panic!("Allocation would exceed memory limit!");
+                } else {
+                    return ptr::null_mut();
+                }
             }
             mem_info.used_memory += mem_diff;
 
