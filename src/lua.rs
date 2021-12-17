@@ -357,7 +357,11 @@ impl Lua {
             }
             let new_used_memory = mem_info.used_memory + mem_diff;
             if mem_info.memory_limit > 0 && new_used_memory > mem_info.memory_limit {
-                return ptr::null_mut();
+                if cfg!(feature = "alloc_panic") {
+                    panic!("Allocation would exceed memory limit!");
+                } else {
+                    return ptr::null_mut();
+                }
             }
 
             let new_layout = alloc::Layout::from_size_align_unchecked(nsize, ffi::SYS_MIN_ALIGN);
@@ -367,6 +371,8 @@ impl Lua {
                 let new_ptr = alloc::alloc(new_layout) as *mut c_void;
                 if !new_ptr.is_null() {
                     mem_info.used_memory += mem_diff;
+                } else if cfg!(feature = "alloc_panic") {
+                    alloc::handle_alloc_error(new_layout);
                 }
                 return new_ptr;
             }
@@ -380,7 +386,9 @@ impl Lua {
             } else if !ptr.is_null() && nsize < osize {
                 // Should not happen
                 alloc::handle_alloc_error(new_layout);
-            }
+            } else if cfg!(feature = "alloc_panic") {
+                alloc::handle_alloc_error(old_layout);
+            } 
 
             new_ptr
         }
