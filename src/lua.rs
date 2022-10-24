@@ -1,6 +1,6 @@
 use std::any::{Any, TypeId};
 use std::cell::{Ref, RefCell, RefMut, UnsafeCell};
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::ffi::CString;
 use std::fmt;
 use std::marker::PhantomData;
@@ -108,10 +108,17 @@ struct ExtraData {
     warn_callback: Option<WarnCallback>,
 }
 
+pub enum MemoryAction {
+    Allocate(usize, usize),
+    Reallocate(usize, usize, usize),
+    Deallocate(usize, usize),
+}
+
 #[cfg_attr(any(feature = "lua51", feature = "luajit"), allow(dead_code))]
 struct MemoryInfo {
     used_memory: isize,
     memory_limit: isize,
+    memory_actions: VecDeque<MemoryAction>,
 }
 
 /// Mode of the Lua garbage collector (GC).
@@ -346,6 +353,9 @@ impl Lua {
                         alloc::Layout::from_size_align_unchecked(osize, ffi::SYS_MIN_ALIGN);
                     alloc::dealloc(ptr as *mut u8, layout);
                     mem_info.used_memory -= osize as isize;
+                    mem_info
+                        .memory_actions
+                        .push_back(MemoryAction::Deallocate(ptr as usize, osize));
                 }
                 return ptr::null_mut();
             }
@@ -374,6 +384,9 @@ impl Lua {
                 } else if cfg!(feature = "alloc_panic") {
                     alloc::handle_alloc_error(new_layout);
                 }
+                mem_info
+                    .memory_actions
+                    .push_back(MemoryAction::Allocate(new_ptr as usize, nsize));
                 return new_ptr;
             }
 
@@ -388,7 +401,11 @@ impl Lua {
                 alloc::handle_alloc_error(new_layout);
             } else if cfg!(feature = "alloc_panic") {
                 alloc::handle_alloc_error(old_layout);
-            } 
+            }
+
+            mem_info
+                .memory_actions
+                .push_back(MemoryAction::Reallocate(ptr as usize, new_ptr as usize, nsize));
 
             new_ptr
         }
@@ -397,6 +414,7 @@ impl Lua {
         let mut mem_info = Box::new(MemoryInfo {
             used_memory: 0,
             memory_limit: 0,
+            memory_actions: VecDeque::new(),
         });
 
         #[cfg(any(feature = "lua54", feature = "lua53", feature = "lua52"))]
@@ -935,6 +953,16 @@ impl Lua {
                     (used_kbytes as usize) * 1024 + (used_kbytes_rem as usize)
                 }
             }
+        }
+    }
+
+    pub fn latest_memory_action(&self) -> Option<MemoryAction> {
+        unsafe {
+            (*self.extra.get())
+                .mem_info
+                .as_mut()
+                .map(|info| info.memory_actions.pop_front())
+                .flatten()
         }
     }
 
