@@ -242,6 +242,37 @@ impl<'lua> Function<'lua> {
 
         data
     }
+
+    pub fn splitdump(&self, strip: bool) -> (Vec<u8>, Vec<u8>) {
+        unsafe extern "C" fn writer(
+            _state: *mut ffi::lua_State,
+            buf: *const c_void,
+            buf_len: usize,
+            data: *mut c_void,
+        ) -> c_int {
+            let data = &mut *(data as *mut Vec<u8>);
+            let buf = slice::from_raw_parts(buf as *const u8, buf_len);
+            data.extend_from_slice(buf);
+            0
+        }
+
+        let lua = self.0.lua;
+        let mut data: Vec<u8> = Vec::new();
+        let mut code: Vec<u8> = Vec::new();
+        unsafe {
+            let _sg = StackGuard::new(lua.state);
+            assert_stack(lua.state, 1);
+
+            lua.push_ref(&self.0);
+            let data_ptr = &mut data as *mut Vec<u8> as *mut c_void;
+            let code_ptr = &mut code as *mut Vec<u8> as *mut c_void;
+            let strip = if strip { 1 } else { 0 };
+            ffi::lua_splitdump(lua.state, writer, data_ptr, code_ptr, strip);
+            ffi::lua_pop(lua.state, 1);
+        }
+
+        (data, code)
+    }
 }
 
 impl<'lua> PartialEq for Function<'lua> {
