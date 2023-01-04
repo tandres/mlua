@@ -1128,6 +1128,8 @@ impl Lua {
         name: Option<&CString>,
         env: Option<Value<'lua>>,
         mode: Option<ChunkMode>,
+        code: Option<*const u8>,
+        code_size: Option<usize>,
     ) -> Result<Function<'lua>> {
         unsafe {
             let _sg = StackGuard::new(self.state);
@@ -1155,6 +1157,8 @@ impl Lua {
                 source.len(),
                 name.map(|n| n.as_ptr()).unwrap_or_else(ptr::null),
                 mode_str,
+                code.unwrap_or(ptr::null()),
+                code_size.unwrap_or(0),
             ) {
                 ffi::LUA_OK => {
                     if let Some(env) = env {
@@ -2420,7 +2424,7 @@ impl Lua {
         )
         .set_name("_mlua_async_poll")?
         .set_environment(env)?
-        .into_function()
+        .into_function(None, None)
     }
 
     #[cfg(feature = "async")]
@@ -2676,6 +2680,8 @@ impl<'lua, 'a> Chunk<'lua, 'a> {
             self.name.as_ref(),
             self.env()?,
             self.mode,
+            None,
+            None,
         ) {
             function.call(())
         } else {
@@ -2707,6 +2713,8 @@ impl<'lua, 'a> Chunk<'lua, 'a> {
                 Err(e) => return Box::pin(future::err(e)),
             },
             self.mode,
+            None,
+            None,
         ) {
             function.call_async(())
         } else {
@@ -2718,7 +2726,7 @@ impl<'lua, 'a> Chunk<'lua, 'a> {
     ///
     /// This is equivalent to `into_function` and calling the resulting function.
     pub fn call<A: ToLuaMulti<'lua>, R: FromLuaMulti<'lua>>(self, args: A) -> Result<R> {
-        self.into_function()?.call(args)
+        self.into_function(None, None)?.call(args)
     }
 
     /// Load the chunk function and asynchronously call it with the given arguments.
@@ -2736,7 +2744,7 @@ impl<'lua, 'a> Chunk<'lua, 'a> {
         A: ToLuaMulti<'lua>,
         R: FromLuaMulti<'lua> + 'fut,
     {
-        match self.into_function() {
+        match self.into_function(None, None) {
             Ok(func) => func.call_async(args),
             Err(e) => Box::pin(future::err(e)),
         }
@@ -2745,9 +2753,9 @@ impl<'lua, 'a> Chunk<'lua, 'a> {
     /// Load this chunk into a regular `Function`.
     ///
     /// This simply compiles the chunk without actually executing it.
-    pub fn into_function(self) -> Result<Function<'lua>> {
+    pub fn into_function(self, code: Option<*const u8>, code_size: Option<usize>,) -> Result<Function<'lua>> {
         self.lua
-            .load_chunk(self.source, self.name.as_ref(), self.env()?, self.mode)
+            .load_chunk(self.source, self.name.as_ref(), self.env()?, self.mode, code, code_size)
     }
 
     fn env(&self) -> Result<Option<Value<'lua>>> {

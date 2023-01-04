@@ -153,6 +153,8 @@ extern "C" {
         sz: usize,
         name: *const c_char,
         mode: *const c_char,
+        code: *const u8,
+        code_size: usize,
     ) -> c_int;
     #[cfg(any(feature = "lua51", feature = "luajit"))]
     pub fn luaL_loadbuffer(
@@ -298,7 +300,7 @@ pub unsafe fn luaL_loadbuffer(
     sz: usize,
     n: *const c_char,
 ) -> c_int {
-    luaL_loadbufferx(L, s, sz, n, ptr::null())
+    luaL_loadbufferx(L, s, sz, n, ptr::null(), ptr::null(), 0)
 }
 
 // TODO: Add buffer API
