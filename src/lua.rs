@@ -2283,6 +2283,13 @@ impl Lua {
             .and_then(|data| data.downcast().ok().map(|data| *data))
     }
 
+    #[cfg(all(feature = "vendored", feature = "lua53"))]
+    pub fn mem_report(&self) -> ffi::lua_Memreport{
+        let mut report = ffi::lua_Memreport::default();
+        unsafe { ffi::lua_memoryreport(self.state, &mut report) };
+        report
+    }
+
     // Uses 2 stack spaces, does not call checkstack
     pub(crate) unsafe fn push_value(&self, value: Value) -> Result<()> {
         match value {

@@ -478,6 +478,8 @@ extern "C" {
     pub fn lua_gethook(L: *mut lua_State) -> Option<lua_Hook>;
     pub fn lua_gethookmask(L: *mut lua_State) -> c_int;
     pub fn lua_gethookcount(L: *mut lua_State) -> c_int;
+    
+    pub fn lua_memoryreport(L: *mut lua_State, report: *mut lua_Memreport);
 }
 
 #[repr(C)]
@@ -497,4 +499,26 @@ pub struct lua_Debug {
     pub short_src: [c_char; LUA_IDSIZE],
     // lua.h mentions this is for private use
     i_ci: *mut c_void,
+}
+
+#[derive(Debug, Default)]
+#[repr(C)]
+pub struct lua_Memreport {
+    object_count: c_int,
+    thread_count: c_int,
+    thread_size: c_int,
+    table_count: c_int,
+    table_size: c_int,
+    short_string_count: c_int,
+    short_string_size: c_int,
+    long_string_count: c_int,
+    long_string_size: c_int,
+    lclosure_count: c_int,
+    lclosure_size: c_int,
+    cclosure_count: c_int,
+    cclosure_size: c_int,
+    userdata_count: c_int,
+    userdata_size: c_int,
+    proto_count: c_int,
+    proto_size: c_int,
 }
