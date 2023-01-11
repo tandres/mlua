@@ -3258,7 +3258,7 @@ unsafe fn load_from_std_lib(state: *mut ffi::lua_State, libs: StdLib) -> Result<
         }
     }
 
-    #[cfg(any(feature = "lua52", feature = "luau"))]
+    #[cfg(any(feature = "lua52", feature = "lua53", feature = "luau"))]
     {
         if libs.contains(StdLib::BIT) {
             requiref(state, ffi::LUA_BITLIBNAME, ffi::luaopen_bit32, 1)?;
