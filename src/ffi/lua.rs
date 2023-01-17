@@ -490,6 +490,11 @@ extern "C" {
         data: *mut c_void,
         strip: c_int,
     ) -> c_int;
+    pub fn lua_string_dump(
+        L: *mut lua_State,
+        writer: lua_Writer,
+        data: *mut c_void,
+    ) -> c_int;
     #[cfg(any(feature = "lua52", feature = "lua51", feature = "luajit"))]
     #[link_name = "lua_dump"]
     pub fn lua_dump_old(L: *mut lua_State, writer: lua_Writer, data: *mut c_void) -> c_int;

@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::os::raw::{c_int, c_void};
 use std::ptr;
 use std::slice;
@@ -237,6 +238,35 @@ impl<'lua> Function<'lua> {
             let data_ptr = &mut data as *mut Vec<u8> as *mut c_void;
             let strip = if strip { 1 } else { 0 };
             ffi::lua_dump(lua.state, writer, data_ptr, strip);
+            ffi::lua_pop(lua.state, 1);
+        }
+
+        data
+    }
+
+    pub fn string_dump(&self) -> HashSet<String> {
+        unsafe extern "C" fn writer(
+            _state: *mut ffi::lua_State,
+            buf: *const c_void,
+            buf_len: usize,
+            data: *mut c_void,
+        ) -> c_int {
+            let data = &mut *(data as *mut HashSet<String>);
+            let buf = slice::from_raw_parts(buf as *const u8, buf_len);
+            let string = String::from_utf8_lossy(buf).to_string();
+            data.insert(string);
+            0
+        }
+
+        let lua = self.0.lua;
+        let mut data: HashSet<String> = HashSet::new();
+        unsafe {
+            let _sg = StackGuard::new(lua.state);
+            assert_stack(lua.state, 1);
+
+            lua.push_ref(&self.0);
+            let data_ptr = &mut data as *mut HashSet<String> as *mut c_void;
+            ffi::lua_string_dump(lua.state, writer, data_ptr);
             ffi::lua_pop(lua.state, 1);
         }
 

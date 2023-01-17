@@ -58,6 +58,7 @@ pub use self::lua::{
     lua_copy,
     lua_createtable,
     lua_dump,
+    lua_string_dump,
     lua_error,
     lua_gc,
     lua_getallocf,
