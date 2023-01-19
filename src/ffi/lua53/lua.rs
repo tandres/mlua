@@ -502,6 +502,7 @@ pub struct lua_Debug {
 }
 
 #[derive(Debug, Default)]
+#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
 #[repr(C)]
 pub struct lua_Memreport {
     object_count: c_int,
