@@ -416,7 +416,11 @@ impl Lua {
             }
             let new_used_memory = mem_info.used_memory + mem_diff;
             if mem_info.memory_limit > 0 && new_used_memory > mem_info.memory_limit {
-                return ptr::null_mut();
+                if cfg!(feature = "alloc_panic") {
+                    panic!("Allocation would exceed memory limit!");
+                } else {
+                    return ptr::null_mut();
+                }
             }
             mem_info.used_memory += mem_diff;
 
@@ -2279,6 +2283,13 @@ impl Lua {
             .and_then(|data| data.downcast().ok().map(|data| *data))
     }
 
+    #[cfg(all(feature = "vendored", feature = "lua53"))]
+    pub fn mem_report(&self) -> ffi::lua_Memreport{
+        let mut report = ffi::lua_Memreport::default();
+        unsafe { ffi::lua_memoryreport(self.state, &mut report) };
+        report
+    }
+
     // Uses 2 stack spaces, does not call checkstack
     pub(crate) unsafe fn push_value(&self, value: Value) -> Result<()> {
         match value {
@@ -3247,7 +3258,7 @@ unsafe fn load_from_std_lib(state: *mut ffi::lua_State, libs: StdLib) -> Result<
         }
     }
 
-    #[cfg(any(feature = "lua52", feature = "luau"))]
+    #[cfg(any(feature = "lua52", feature = "lua53", feature = "luau"))]
     {
         if libs.contains(StdLib::BIT) {
             requiref(state, ffi::LUA_BITLIBNAME, ffi::luaopen_bit32, 1)?;
