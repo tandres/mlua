@@ -7,8 +7,6 @@ edition = "2018"
 [lib]
 crate-type = ["cdylib"]
 
-[workspace]
-
 [features]
 lua54 = ["mlua/lua54"]
 lua53 = ["mlua/lua53"]
