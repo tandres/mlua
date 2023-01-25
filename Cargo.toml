@@ -37,7 +37,7 @@ vendored = ["lua-src", "luajit-src"]
 module = ["mlua_derive"]
 async = ["futures-core", "futures-task", "futures-util"]
 send = []
-serialize = ["serde", "erased-serde"]
+serialize = ["serde", "serde/derive", "erased-serde"]
 macros = ["mlua_derive/macros"]
 alloc_panic = []
 

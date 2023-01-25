@@ -1,11 +1,13 @@
 [package]
-name = "rust_module"
+name = "example_rust_module"
 version = "0.0.0"
 authors = ["Aleksandr Orlenko <zxteam@pm.me>"]
 edition = "2018"
 
 [lib]
 crate-type = ["cdylib"]
+
+[workspace]
 
 [features]
 lua54 = ["mlua/lua54"]
