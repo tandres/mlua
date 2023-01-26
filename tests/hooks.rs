@@ -233,3 +233,28 @@ fn test_hook_swap_within_hook() -> Result<()> {
         Ok(())
     })
 }
+
+
+#[test]
+fn short_lineinfo() {
+    // This is testing that debug line hooks still work with lineinfo as unsigned shorts.
+    // After 65,535 lines the lineinfo should rollover, if the lineinfo was clamped to
+    // 65,535 then debug line hooks would stop working after 65,535 lines.
+    let lua = unsafe { Lua::unsafe_new() };
+    let mut new_lines = vec![0x0A_u8; 0xFFFF];
+    let script = br#"        
+        local line_tracker = 7
+        function trace (event, line)
+            assert(line == line_tracker, "Unexpected line number")
+            line_tracker = line_tracker + 1
+        end
+        debug.sethook(trace, "l")
+        a = 1
+        a = 2
+        a = 3
+        assert(line_tracker == 11, "Hook didn't run")
+    "#;
+    new_lines.extend_from_slice(script);
+
+    lua.load(&new_lines).exec().unwrap();
+}
